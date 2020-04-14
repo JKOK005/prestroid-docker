@@ -9,7 +9,7 @@ from
   ,customer_address
   ,web_site
 where
-    d_date between '1999-4-01' and 
+    d_date between cast('1999-4-01' as date) and 
            (cast('1999-4-01' as date) + interval '60' day)
 and ws1.ws_ship_date_sk = d_date_sk
 and ws1.ws_ship_addr_sk = ca_address_sk
