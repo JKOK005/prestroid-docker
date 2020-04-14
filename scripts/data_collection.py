@@ -57,14 +57,23 @@ def profile_query(query: str, conn: prestodb.dbapi.Connection):
 	fetch_query_metadata = _fetch_query_metadata(query_id = query_stats["queryId"])
 	return {"queryId": query_stats["queryId"], "results": fetch_query_metadata}
 
+def seek_queries(query_root: str) -> [str]:
+	legitimate_query_paths = []
+	for directory, sub_dir, files in os.walk(query_root):
+		for each_file in files:
+			if ".sql" in each_file:
+				legitimate_query_paths.append(os.path.join(directory, each_file))
+	return legitimate_query_paths
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Prestroid data collection parser')
-	parser.add_argument('--presto-host', type=str, nargs='+', default='localhost', help='Presto host url')
-	parser.add_argument('--port', type=int, nargs='+', default=8080, help='Presto port')
-	parser.add_argument('--user', type=str, nargs='+', default='jkok005', help='Presto user')
-	parser.add_argument('--catalog', type=str, nargs='+', default='tpcds', help='Presto catalog')
-	parser.add_argument('--schema', type=str, nargs='+', default='sf1', help='Presto schema')
-	parser.add_argument('--results', type=str, nargs='+', default='profile', help='Base directory to store all profiling results')
+	parser.add_argument('--presto-host', type=str, nargs='?', default='localhost', help='Presto host url')
+	parser.add_argument('--port', type=int, nargs='?', default=8080, help='Presto port')
+	parser.add_argument('--user', type=str, nargs='?', default='jkok005', help='Presto user')
+	parser.add_argument('--catalog', type=str, nargs='?', default='tpcds', help='Presto catalog')
+	parser.add_argument('--schema', type=str, nargs='?', default='sf1', help='Presto schema')
+	parser.add_argument('--query-root', type=str, nargs='?', default='queries', help='Base directory for all queries to be executed')
+	parser.add_argument('--results', type=str, nargs='?', default='results', help='Base directory to store all profiling results')
 	args = parser.parse_args()
 
 	logging.info(args)
@@ -77,6 +86,8 @@ if __name__ == "__main__":
         		catalog = GLOBAL_ARGS.catalog, 
         		schema = GLOBAL_ARGS.schema)   
 
-	query 	= "SELECT * FROM store_returns LIMIT 100" 
-	res 	= profile_query(query = query, conn = conn)
-	print(res)
+	all_queries = seek_queries(query_root = args.query_root)
+	for each_query in all_queries:
+		logging.info("Profiling {0}".format(each_query))
+		parsed_query = each_query.replace(";", "")
+		res = profile_query(query = parsed_query, conn = conn)
