@@ -89,5 +89,6 @@ if __name__ == "__main__":
 	all_queries = seek_queries(query_root = args.query_root)
 	for each_query in all_queries:
 		logging.info("Profiling {0}".format(each_query))
-		parsed_query = each_query.replace(";", "")
+		with open(each_query, "r") as f:
+			parsed_query = f.read().replace(";", "")
 		res = profile_query(query = parsed_query, conn = conn)
