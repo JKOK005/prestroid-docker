@@ -1,0 +1,10 @@
+version: "3"
+services:
+  presto-coordinator:
+    container_name: prestroid-coordinator
+    image: jkok005/prestroid-coordinator:latest
+    ports:
+      - "8080:8080"
+
+  presto-worker:
+    image: jkok005/prestroid-worker:latest  
