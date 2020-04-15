@@ -86,8 +86,10 @@ if __name__ == "__main__":
         		catalog = GLOBAL_ARGS.catalog, 
         		schema = GLOBAL_ARGS.schema)   
 
-	all_queries = seek_queries(query_root = args.query_root)
-	for each_query in all_queries:
+	# all_queries = seek_queries(query_root = args.query_root)
+	# for each_query in all_queries:
+	for i in range(1, 100):
+		each_query = os.path.join("/home/johan/Desktop/prestroid-docker/queries", "query{0}.sql".format(i))
 		logging.info("Profiling {0}".format(each_query))
 		with open(each_query, "r") as f:
 			parsed_query = f.read().replace(";", "")
