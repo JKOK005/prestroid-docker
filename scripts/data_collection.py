@@ -3,17 +3,29 @@ Issues all queries in "queries" folder to a Presto cluster and records the resul
 """
 
 import argparse
+import copy
 import prestodb
 import time
 import requests
 import logging
 import os
+from scripts.writer import DatasetWriter
 from typing import Dict
 
 QUERY_POLL_INTERVAL = 5
 GLOBAL_ARGS = None
+SAVED_FILE_NAME = "{0}-results.csv".format(int(time.time()))
 
+data_writer 	= DatasetWriter()
 logging.basicConfig(level = logging.INFO)
+
+def seek_queries(query_root: str) -> [str]:
+	legitimate_query_paths = []
+	for directory, sub_dir, files in os.walk(query_root):
+		for each_file in files:
+			if ".sql" in each_file:
+				legitimate_query_paths.append(os.path.join(directory, each_file))
+	return legitimate_query_paths
 
 def _execute_for_query_states(query: str, conn: prestodb.dbapi.Connection):
 	cur = conn.cursor()
@@ -57,13 +69,17 @@ def profile_query(query: str, conn: prestodb.dbapi.Connection):
 	fetch_query_metadata = _fetch_query_metadata(query_id = query_stats["queryId"])
 	return {"queryId": query_stats["queryId"], "results": fetch_query_metadata}
 
-def seek_queries(query_root: str) -> [str]:
-	legitimate_query_paths = []
-	for directory, sub_dir, files in os.walk(query_root):
-		for each_file in files:
-			if ".sql" in each_file:
-				legitimate_query_paths.append(os.path.join(directory, each_file))
-	return legitimate_query_paths
+def enrich_with_cluster_config(query_stats):
+	copied_stats = copy.copy(query_stats)
+	copied_stats["coordinator_config"] = GLOBAL_ARGS.coordinator_config
+	copied_stats["worker_config"] = GLOBAL_ARGS.worker_config
+	return copied_stats
+
+def save_states(query_stats):
+	save_dir = "coord_{0}_worker_{1}".format(GLOBAL_ARGS.coordinator_config, GLOBAL_ARGS.worker_config)
+	stats_file_path = os.path.join(GLOBAL_ARGS.results_root, save_dir, SAVED_FILE_NAME)
+	logging.info("Saving stats to {0}".format(stats_file_path))
+	data_writer.writeDictToCsv(to_save_dict = query_stats, mode='a+', location=stats_file_path)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Prestroid data collection parser')
@@ -73,7 +89,9 @@ if __name__ == "__main__":
 	parser.add_argument('--catalog', type=str, nargs='?', default='tpcds', help='Presto catalog')
 	parser.add_argument('--schema', type=str, nargs='?', default='sf1', help='Presto schema')
 	parser.add_argument('--query-root', type=str, nargs='?', default='queries', help='Base directory for all queries to be executed')
-	parser.add_argument('--results', type=str, nargs='?', default='results', help='Base directory to store all profiling results')
+	parser.add_argument('--results-root', type=str, nargs='?', default='results', help='Base directory to store all profiling results')
+	parser.add_argument('--coordinator-config', type=str, nargs='?', default='default', help='Base directory to store all profiling results')
+	parser.add_argument('--worker-config', type=str, nargs='?', default='default', help='Base directory to store all profiling results')
 	args = parser.parse_args()
 
 	logging.info(args)
@@ -86,11 +104,11 @@ if __name__ == "__main__":
         		catalog = GLOBAL_ARGS.catalog, 
         		schema = GLOBAL_ARGS.schema)   
 
-	# all_queries = seek_queries(query_root = args.query_root)
-	# for each_query in all_queries:
-	for i in range(1, 100):
-		each_query = os.path.join("/home/johan/Desktop/prestroid-docker/queries", "query{0}.sql".format(i))
+	all_queries = seek_queries(query_root = args.query_root)
+	for each_query in all_queries:
 		logging.info("Profiling {0}".format(each_query))
 		with open(each_query, "r") as f:
 			parsed_query = f.read().replace(";", "")
-		res = profile_query(query = parsed_query, conn = conn)
+		results = profile_query(query = parsed_query, conn = conn)
+		w_cluster_config_results = enrich_with_cluster_config(query_stats = results)
+		save_states(query_stats = w_cluster_config_results)
