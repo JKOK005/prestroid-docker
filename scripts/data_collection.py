@@ -111,4 +111,5 @@ if __name__ == "__main__":
 			parsed_query = f.read().replace(";", "")
 		results = profile_query(query = parsed_query, conn = conn)
 		w_cluster_config_results = enrich_with_cluster_config(query_stats = results)
+		w_cluster_config_results["query_name"] = each_query.split("/")[-1]
 		save_states(query_stats = w_cluster_config_results)
