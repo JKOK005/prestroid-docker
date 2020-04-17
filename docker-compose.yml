@@ -8,3 +8,8 @@ services:
 
   presto-worker:
     image: jkok005/prestroid-worker:latest  
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 40G
