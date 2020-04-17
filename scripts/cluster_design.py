@@ -41,8 +41,6 @@ PERMUTATIONS = {
 			"selection" : ["all-at-once", "phased"],
 			"repr" 		: "{0}"
 		},
-	}, 
-	"coordinator" : {
 		"spill-compression-enabled" : {
 			"options" 	: 2,
 			"selection" : ["true", "false"],
@@ -53,7 +51,8 @@ PERMUTATIONS = {
 			"selection" : [10, 100, 1000],
 			"repr" 		: "{0}"
 		},
-	}
+	}, 
+	"coordinator" : {}
 }
 
 def randomize(initial_list: [int]) -> [int]:
