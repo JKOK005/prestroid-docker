@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 build_mode=3 			# 1 - Coordinator only, 2 - Worker only, 3 - Coordinator and worker
-config="A"
+config="B"
 jvm_cfg="jvm.config"
 node_cfg="config.properties"
 
