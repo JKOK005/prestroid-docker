@@ -1,36 +1,45 @@
+import argparse
+import ast
 import copy
+import glob
 import logging
 import os
 import pandas as pd 
 import prestodb
 import re
+from tqdm import tqdm
 from scripts.writer import DatasetWriter
 
 QUERY_ROOT = os.environ["QUERY_ROOT"]
 
 logging.basicConfig(level = logging.INFO)
 
+tqdm.pandas()
+
+data_writer = DatasetWriter()
+
 def _get_peak_total_memory(results) -> float:
 	"""
-	Extracts peak total memory in GB
+	Extracts peak total memory in MB
 	"""
 	def get_multiplier(prefix: str):
 		scale = None
 		if prefix == "B":
-			scale = 1 / 1000000000
-		elif prefix == "KB":
 			scale = 1 / 1000000
-		elif prefix == "MB"
+		elif prefix == "KB":
 			scale = 1 / 1000
-		elif prefix == "GB"
-			scale = 1
-		elif prefix == "TB"
+		elif prefix == "MB":
+			scale = 1 / 1
+		elif prefix == "GB":
 			scale = 1000
+		elif prefix == "TB":
+			scale = 1000000
 		else:
 			raise Exception("Prefix {0} not supported".format(size)) 
 		return scale
 
-	peak_memory_str = results["queryStats"]["peakTotalMemoryReservation"]
+	results_dict = ast.literal_eval(results)
+	peak_memory_str = results_dict["queryStats"]["peakTotalMemoryReservation"]
 	value 	= int(re.findall(r'\d+', peak_memory_str)[0])
 	prefix 	= re.findall(r'[a-zA-Z]', peak_memory_str)[0]
 	return value * get_multiplier(prefix = prefix)
@@ -42,7 +51,7 @@ def with_peak_total_memory(df: pd.DataFrame) -> pd.DataFrame:
 	Expects a column `results` containing profiled query results
 	"""
 	_tmp_df = copy.copy(df)
-	_tmp_df["peak_memory"] = df.apply(lambda row: _get_peak_total_memory(row = row["results"]))
+	_tmp_df["peak_memory"] = _tmp_df.progress_apply(lambda row: _get_peak_total_memory(results = row["results"]), axis = 1)
 	return _tmp_df
 
 
@@ -56,13 +65,14 @@ def _get_execution_time(results) -> float:
 			scale = 60
 		elif prefix == "m":
 			scale = 1
-		elif prefix == "h"
+		elif prefix == "h":
 			scale = 1 / 60
 		else:
 			raise Exception("Prefix {0} not supported".format(size)) 
 		return scale
 
-	execution_time_str = results["queryStats"]["executionTime"]
+	results_dict = ast.literal_eval(results)
+	execution_time_str = results_dict["queryStats"]["executionTime"]
 	value 	= float(re.findall(r'\d+\.\d+', execution_time_str)[0])
 	prefix 	= re.findall(r'[a-zA-Z]', execution_time_str)[0]
 	return value * get_multiplier(prefix = prefix)
@@ -74,7 +84,7 @@ def with_execution_time(df: pd.DataFrame) -> pd.DataFrame:
 	Expects a column `results` containing profiled query results
 	"""
 	_tmp_df = copy.copy(df)
-	_tmp_df["execution_time"] = df.apply(lambda row: _get_execution_time(row["results"]))
+	_tmp_df["execution_time"] = _tmp_df.progress_apply(lambda row: _get_execution_time(results = row["results"]), axis = 1)
 	return _tmp_df
 
 
@@ -117,8 +127,17 @@ def with_logical_plan(df: pd.DataFrame) -> pd.DataFrame:
 	Expects columns `query_name` / `schema` containing which template query was executed under which schema
 	"""
 	_tmp_df = copy.copy(df)
-	_tmp_df["logical_plan"] = df.apply(lambda row: _get_logical_plan(query_name = row["query_name"], schema = row["schema"]))
+	_tmp_df["logical_plan"] = _tmp_df.progress_apply(lambda row: _get_logical_plan(query_name = row["query_name"], schema = row["schema"]), axis = 1)
 	return _tmp_df
+
+def main(df: pd.DataFrame) -> None:
+	df_with_peak_mem = with_peak_total_memory(df = df)
+	df_with_execution_time = with_execution_time(df = df_with_peak_mem)
+	df_with_logical_plan = with_logical_plan(df = df_with_execution_time)
+
+	out_file = os.path.join(GLOBAL_ARGS.out_dir, "metadata.csv")
+	logging.info("Write out to {0}".format(out_file))
+	data_writer.writeCsv(df = df_with_logical_plan, mode = "w", location = out_file)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Prestroid data collection parser')
@@ -126,7 +145,17 @@ if __name__ == "__main__":
 	parser.add_argument('--port', type=int, nargs='?', default=8080, help='Presto port')
 	parser.add_argument('--user', type=str, nargs='?', default='jkok005', help='Presto user')
 	parser.add_argument('--catalog', type=str, nargs='?', default='tpcds', help='Presto catalog')
+	parser.add_argument('--profiling_dir', type=str, nargs='?', default='./samples/profiling', help='Profiled results directory')
+	parser.add_argument('--out_dir', type=str, nargs='?', default='./samples/extract', help='Extracted metadata directory')
 	args = parser.parse_args()
 
 	logging.info(args)
 	GLOBAL_ARGS = args
+
+	profiling_files = glob.glob(GLOBAL_ARGS.profiling_dir + "/*/*.csv")
+	logging.info("Identified profiling files: {0}".format(profiling_files))
+
+	columns = ["queryId", "results", "coordinator_config", "worker_config", "query_name", "schema"]
+	all_df 	= [pd.read_csv(each_df, names = columns) for each_df in profiling_files]
+	profiling_df = pd.concat(all_df)
+	main(df = profiling_df)
