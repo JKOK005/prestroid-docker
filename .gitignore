@@ -1,2 +1,2 @@
 results/*
-samples/profiling
+samples/**/*.csv
