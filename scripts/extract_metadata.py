@@ -62,11 +62,11 @@ def _get_execution_time(results) -> float:
 	def get_multiplier(prefix: str):
 		scale = None
 		if prefix == "s":
-			scale = 60
+			scale = 1/60
 		elif prefix == "m":
 			scale = 1
 		elif prefix == "h":
-			scale = 1 / 60
+			scale = 60
 		else:
 			raise Exception("Prefix {0} not supported".format(size)) 
 		return scale
