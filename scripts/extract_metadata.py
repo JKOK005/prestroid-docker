@@ -131,13 +131,12 @@ def with_logical_plan(df: pd.DataFrame) -> pd.DataFrame:
 	return _tmp_df
 
 def main(df: pd.DataFrame) -> None:
-	df_with_peak_mem = with_peak_total_memory(df = df)
+	df_with_logical_plan = with_logical_plan(df = df)
+	df_with_peak_mem = with_peak_total_memory(df = df_with_logical_plan)
 	df_with_execution_time = with_execution_time(df = df_with_peak_mem)
-	df_with_logical_plan = with_logical_plan(df = df_with_execution_time)
-
 	out_file = os.path.join(GLOBAL_ARGS.out_dir, "metadata.csv")
 	logging.info("Write out to {0}".format(out_file))
-	data_writer.writeCsv(df = df_with_logical_plan, mode = "w", location = out_file)
+	data_writer.writeCsv(df = df_with_execution_time, mode = "w", location = out_file)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Prestroid data collection parser')
