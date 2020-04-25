@@ -2,7 +2,7 @@
 ```bash
 num_workers=5
 
-docker-compose up --scale prestroid-worker=${num_workers} -d
+docker-compose up --scale prestro-worker=${num_workers} -d
 ```
 
 * Note: This command only works for docker-compose version >= 1.13.0
