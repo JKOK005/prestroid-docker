@@ -92,6 +92,7 @@ if __name__ == "__main__":
 	parser.add_argument('--results-root', type=str, nargs='?', default='results', help='Base directory to store all profiling results')
 	parser.add_argument('--coordinator-config', type=str, nargs='?', default='default', help='Base directory to store all profiling results')
 	parser.add_argument('--worker-config', type=str, nargs='?', default='default', help='Base directory to store all profiling results')
+	parser.add_argument('--repeats', type=int, nargs='?', default=1, help='Presto port')
 	args = parser.parse_args()
 
 	logging.info(args)
@@ -105,12 +106,14 @@ if __name__ == "__main__":
         		schema = GLOBAL_ARGS.schema)   
 
 	all_queries = seek_queries(query_root = args.query_root)
-	for each_query in all_queries:
-		logging.info("Profiling {0}".format(each_query))
-		with open(each_query, "r") as f:
-			parsed_query = f.read().replace(";", "")
-		results = profile_query(query = parsed_query, conn = conn)
-		w_cluster_config_results = enrich_with_cluster_config(query_stats = results)
-		w_cluster_config_results["query_name"] = each_query.split("/")[-1]
-		w_cluster_config_results["scale_factor"] = GLOBAL_ARGS.schema
+	
+	for _ in range(args.repeats):
+		for each_query in all_queries:
+			logging.info("Profiling {0}".format(each_query))
+			with open(each_query, "r") as f:
+				parsed_query = f.read().replace(";", "")
+			results = profile_query(query = parsed_query, conn = conn)
+			w_cluster_config_results = enrich_with_cluster_config(query_stats = results)
+			w_cluster_config_results["query_name"] = each_query.split("/")[-1]
+			w_cluster_config_results["scale_factor"] = GLOBAL_ARGS.schema
 		save_states(query_stats = w_cluster_config_results)
