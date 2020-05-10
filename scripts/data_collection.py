@@ -116,4 +116,4 @@ if __name__ == "__main__":
 			w_cluster_config_results = enrich_with_cluster_config(query_stats = results)
 			w_cluster_config_results["query_name"] = each_query.split("/")[-1]
 			w_cluster_config_results["scale_factor"] = GLOBAL_ARGS.schema
-		save_states(query_stats = w_cluster_config_results)
+			save_states(query_stats = w_cluster_config_results)
