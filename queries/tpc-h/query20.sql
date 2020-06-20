@@ -1,6 +1,6 @@
 -- explain formatted 
 with tmp1 as (
-    select p.partkey from part where p.name like 'forest%'
+    select p.partkey from part p where p.name like 'forest%'
 ),
 tmp2 as (
     select s.name, s.address, s.suppkey
@@ -9,32 +9,32 @@ tmp2 as (
     and n.name = 'CANADA'
 ),
 tmp3 as (
-    select l.partkey, 0.5 * sum(l.quantity) as sum.quantity, l.suppkey
+    select l.partkey, 0.5 * sum(l.quantity) as sq, l.suppkey
     from lineitem l, tmp2
-    where l.shipdate >= '1994-01-01' and l.shipdate <= '1995-01-01'
-    and l.suppkey = s.suppkey 
+    where l.shipdate >= cast('1994-01-01' as date) and l.shipdate <= cast('1995-01-01' as date)
+    and l.suppkey = tmp2.suppkey 
     group by l.partkey, l.suppkey
 ),
 tmp4 as (
     select ps.partkey, ps.suppkey, ps.availqty
     from partsupp ps
-    where ps.partkey IN (select p.partkey from tmp1)
+    where ps.partkey IN (select tmp1.partkey from tmp1)
 ),
 tmp5 as (
 select
-    ps.suppkey
+    tmp4.suppkey
 from
     tmp4, tmp3
 where
-    ps.partkey = l.partkey
-    and ps.suppkey = l.suppkey
-    and ps.availqty > sum.quantity
+    tmp4.partkey = tmp3.partkey
+    and tmp4.suppkey = tmp3.suppkey
+    and tmp4.availqty > tmp3.sq
 )
 select
     s.name,
     s.address
 from
-    supplier
+    supplier s
 where
-    s.suppkey IN (select ps.suppkey from tmp5)
+    s.suppkey IN (select tmp5.suppkey from tmp5)
 order by s.name;
