@@ -154,7 +154,7 @@ if __name__ == "__main__":
 	profiling_files = glob.glob(GLOBAL_ARGS.profiling_dir + "/*/*.csv")
 	logging.info("Identified profiling files: {0}".format(profiling_files))
 
-	columns = ["queryId", "results", "coordinator_config", "worker_config", "query_name", "schema"]
+	columns = ["results", "coordinator_config", "worker_config", "query_name", "schema", "queryId"]
 	all_df 	= [pd.read_csv(each_df, names = columns) for each_df in profiling_files]
 	profiling_df = pd.concat(all_df)
 	main(df = profiling_df)
