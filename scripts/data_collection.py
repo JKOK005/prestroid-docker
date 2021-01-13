@@ -71,7 +71,7 @@ def profile_query(query: str, conn: prestodb.dbapi.Connection):
 		return {"queryId": query_stats["queryId"], "results": fetch_query_metadata}
 	except Exception as ex:
 		print(ex)
-		return {"queryId": query_stats["queryId"], "results": None}
+		return {"queryId": None, "results": None}
 
 def enrich_with_cluster_config(query_stats):
 	copied_stats = copy.copy(query_stats)
