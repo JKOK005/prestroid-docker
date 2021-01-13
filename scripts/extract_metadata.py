@@ -68,7 +68,7 @@ def _get_execution_time(results) -> float:
 		elif prefix == "h":
 			scale = 60
 		else:
-			raise Exception("Prefix {0} not supported".format(size)) 
+			raise Exception("Prefix {0} not supported".format(prefix)) 
 		return scale
 
 	results_dict = ast.literal_eval(results)
@@ -87,6 +87,39 @@ def with_execution_time(df: pd.DataFrame) -> pd.DataFrame:
 	_tmp_df["execution_time"] = _tmp_df.progress_apply(lambda row: _get_execution_time(results = row["results"]), axis = 1)
 	return _tmp_df
 
+def _get_total_cpu_time(results) -> float:
+	"""
+	Extracts execution time in min
+	"""
+	def get_multiplier(prefix: str):
+		scale = None
+		if prefix == "s":
+			scale = 1/60
+		elif prefix == "m":
+			scale = 1
+		elif prefix == "h":
+			scale = 60
+		elif prefix == "d":
+			scale = 60 * 24
+		else:
+			raise Exception("Prefix {0} not supported".format(prefix)) 
+		return scale
+
+	results_dict = ast.literal_eval(results)
+	total_time_str = results_dict["queryStats"]["totalCpuTime"]
+	value 	= float(re.findall(r'\d+\.\d+', total_time_str)[0])
+	prefix 	= re.findall(r'[a-zA-Z]', total_time_str)[0]
+	return value * get_multiplier(prefix = prefix)
+
+def with_total_cpu_time(df: pd.DataFrame) -> pd.DataFrame:
+	"""
+	Returns a DF with execution_time column
+
+	Expects a column `results` containing profiled query results
+	"""
+	_tmp_df = copy.copy(df)
+	_tmp_df["total_cpu_time"] = _tmp_df.progress_apply(lambda row: _get_total_cpu_time(results = row["results"]), axis = 1)
+	return _tmp_df
 
 def _prefix_explain(query: str) -> str:
 	"""
@@ -134,9 +167,10 @@ def main(df: pd.DataFrame) -> None:
 	df_with_logical_plan = with_logical_plan(df = df)
 	df_with_peak_mem = with_peak_total_memory(df = df_with_logical_plan)
 	df_with_execution_time = with_execution_time(df = df_with_peak_mem)
+	df_with_total_cpu_time = with_execution_time(df = df_with_execution_time)
 	out_file = os.path.join(GLOBAL_ARGS.out_dir, "metadata.csv")
 	logging.info("Write out to {0}".format(out_file))
-	data_writer.writeCsv(df = df_with_execution_time, mode = "w", location = out_file)
+	data_writer.writeCsv(df = df_with_total_cpu_time, mode = "w", location = out_file)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Prestroid data collection parser')
