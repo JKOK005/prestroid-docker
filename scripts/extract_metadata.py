@@ -140,7 +140,7 @@ def _execute(query: str, schema: str):
 	cur.close()
 	return result[0]
 
-def _get_logical_plan(query_name: str, schema: str) -> str:
+def _get_logical_plan(query_name: str, schema: str) -> pd.Series:
 	"""
 	Extracts logical plan as a digraph string
 
@@ -151,7 +151,7 @@ def _get_logical_plan(query_name: str, schema: str) -> str:
 		executable_query = _prefix_explain(query = f.read())
 		executable_query = executable_query.replace(";", "")
 	result = _execute(query = executable_query, schema = schema)
-	return result
+	return pd.Series([result, executable_query], index = ["logical_plan", "query"])
 
 def with_logical_plan(df: pd.DataFrame) -> pd.DataFrame:
 	"""
@@ -160,7 +160,7 @@ def with_logical_plan(df: pd.DataFrame) -> pd.DataFrame:
 	Expects columns `query_name` / `schema` containing which template query was executed under which schema
 	"""
 	_tmp_df = copy.copy(df)
-	_tmp_df["logical_plan"] = _tmp_df.progress_apply(lambda row: _get_logical_plan(query_name = row["query_name"], schema = row["schema"]), axis = 1)
+	_tmp_df[["logical_plan", "query"]] = _tmp_df.progress_apply(lambda row: _get_logical_plan(query_name = row["query_name"], schema = row["schema"]), axis = 1)
 	return _tmp_df
 
 def main(df: pd.DataFrame) -> None:
