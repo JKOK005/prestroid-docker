@@ -167,7 +167,7 @@ def main(df: pd.DataFrame) -> None:
 	df_with_logical_plan = with_logical_plan(df = df)
 	df_with_peak_mem = with_peak_total_memory(df = df_with_logical_plan)
 	df_with_execution_time = with_execution_time(df = df_with_peak_mem)
-	df_with_total_cpu_time = with_execution_time(df = df_with_execution_time)
+	df_with_total_cpu_time = with_total_cpu_time(df = df_with_execution_time)
 	out_file = os.path.join(GLOBAL_ARGS.out_dir, "metadata.csv")
 	logging.info("Write out to {0}".format(out_file))
 	data_writer.writeCsv(df = df_with_total_cpu_time, mode = "w", location = out_file)
@@ -190,5 +190,6 @@ if __name__ == "__main__":
 
 	columns = ["results", "coordinator_config", "worker_config", "query_name", "schema", "queryId"]
 	all_df 	= [pd.read_csv(each_df, names = columns) for each_df in profiling_files]
+	all_df 	= all_df[~all_df.results.isna()]
 	profiling_df = pd.concat(all_df)
 	main(df = profiling_df)
