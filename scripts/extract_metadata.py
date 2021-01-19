@@ -148,10 +148,11 @@ def _get_logical_plan(query_name: str, schema: str) -> pd.Series:
 	"""
 	query_path = os.path.join(QUERY_ROOT, query_name)
 	with open(query_path, "r") as f:
-		executable_query = _prefix_explain(query = f.read())
+		raw_query 		 = f.read()
+		executable_query = _prefix_explain(query = raw_query)
 		executable_query = executable_query.replace(";", "")
 	result = _execute(query = executable_query, schema = schema)
-	return pd.Series([result, executable_query], index = ["logical_plan", "query"])
+	return pd.Series([result, raw_query], index = ["logical_plan", "query"])
 
 def with_logical_plan(df: pd.DataFrame) -> pd.DataFrame:
 	"""
