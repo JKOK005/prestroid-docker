@@ -185,11 +185,11 @@ if __name__ == "__main__":
 	logging.info(args)
 	GLOBAL_ARGS = args
 
-	profiling_files = glob.glob(GLOBAL_ARGS.profiling_dir + "/*/*.csv")
+	profiling_files = glob.glob(GLOBAL_ARGS.profiling_dir + "/*.csv")
 	logging.info("Identified profiling files: {0}".format(profiling_files))
 
 	columns = ["results", "coordinator_config", "worker_config", "query_name", "schema", "queryId"]
 	all_df 	= [pd.read_csv(each_df, names = columns) for each_df in profiling_files]
-	all_df 	= all_df[~all_df.results.isna()]
 	profiling_df = pd.concat(all_df)
+	profiling_df = profiling_df[~profiling_df.results.isna()]
 	main(df = profiling_df)
